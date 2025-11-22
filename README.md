@@ -17,3 +17,4 @@
 #17° ideia: tela de mensagens internas
 #18° ideia: tela de documentos e arquivos
 #19° ideia: tela de configuracoes de seguranca
+#20° ideia: ponto de escala
