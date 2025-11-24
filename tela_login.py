@@ -5,7 +5,7 @@ ctk.set_default_color_theme("dark-blue")
 # tela de login
 tela = ctk.CTk()
 tela.title("Tela de Login")
-tela.geometry("400x300")
+tela.geometry("1920x1080")
 informacoes_iniciais = ctk.CTkLabel(tela, text="Faça login preenchendo os campos abaixo:")
 informacoes_iniciais.grid(column=0, row=0, padx=10, pady=10)
 # campo de entrada para o nome de usuário

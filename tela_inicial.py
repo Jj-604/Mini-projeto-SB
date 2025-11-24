@@ -4,7 +4,7 @@ from tkinter import *
 #codigo para criar a janela principal
 Jenela = Tk()
 Jenela.title("Tela Inicial")
-Jenela.geometry("400x300")
+Jenela.geometry("1920x1080")
 Inomrações_iniciais = Label(Jenela, text="Deseja cadastrar um novo usuario ou fazer login?")
 Inomrações_iniciais.grid(column=0, row=0, padx=10, pady=10)
 #botão para cadastrar novo usuario
