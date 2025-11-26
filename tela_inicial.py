@@ -1,27 +1,50 @@
-# tela de inicio
-#biblioteca tkinter sendo usado para a criação da interface gráfica
-from tkinter import * 
-#codigo para criar a janela principal
-Jenela = Tk()
-Jenela.title("Tela Inicial")
-Jenela.geometry("1920x1080")
-Inomrações_iniciais = Label(Jenela, text="Deseja cadastrar um novo usuario ou fazer login?")
-Inomrações_iniciais.grid(column=0, row=0, padx=10, pady=10)
-#botão para cadastrar novo usuario
+import customtkinter as ctk
+import subprocess
+import sys
+
+# Configurações de aparência
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("dark-blue")
+
+# Tela inicial
+tela = ctk.CTk()
+tela.title("Sistema de Gestão - Tela Inicial")
+tela.geometry("600x400")
+tela.resizable(False, False)
+
+# Frame principal centralizado
+frame_principal = ctk.CTkFrame(tela)
+frame_principal.place(relx=0.5, rely=0.5, anchor="center")
+
+# Título
+titulo = ctk.CTkLabel(frame_principal, text="Bem-vindo ao Sistema de Gestão", font=ctk.CTkFont(size=24, weight="bold"))
+titulo.pack(pady=30, padx=40)
+
+subtitulo = ctk.CTkLabel(frame_principal, text="Escolha uma opção para continuar:", font=ctk.CTkFont(size=14))
+subtitulo.pack(pady=10)
+
+# Botão para cadastrar novo usuário
 def cadastrar_usuario():
-    Jenela.destroy()
-    import tela_cadastro
-botao_cadastrar = Button(Jenela, text="Cadastrar Novo Usuario", command=cadastrar_usuario)
-botao_cadastrar.grid(column=0, row=2, padx=10, pady=10)
-texto_botao_cadastrar = Label(Jenela, text="Deseja cadastrar um novo usuario?")
-texto_botao_cadastrar.grid(column=0, row=3, padx=10, pady=10)
-#botão para fazer login
+    tela.destroy()
+    subprocess.Popen([sys.executable, "tela_cadastro.py"])
+
+botao_cadastrar = ctk.CTkButton(frame_principal, text="Cadastrar Novo Usuário", command=cadastrar_usuario, width=200, height=40)
+botao_cadastrar.pack(pady=10)
+
+# Botão para fazer login
 def fazer_login():
-    Jenela.destroy()
-    import tela_login
-botao_login = Button(Jenela, text="Fazer Login", command=fazer_login)
-botao_login.grid(column=0, row=4, padx=10, pady=10)
-texto_botao_login = Label(Jenela, text="Ja possui uma conta?")
-texto_botao_login.grid(column=0, row=5, padx=10, pady=10)
-#codigo para manter a janela aberta
-Jenela.mainloop()
+    tela.destroy()
+    subprocess.Popen([sys.executable, "tela_login.py"])
+
+botao_login = ctk.CTkButton(frame_principal, text="Fazer Login", command=fazer_login, width=200, height=40)
+botao_login.pack(pady=10)
+
+# Botão para sair
+def sair():
+    tela.destroy()
+
+botao_sair = ctk.CTkButton(frame_principal, text="Sair", command=sair, width=200, height=40, fg_color="red", hover_color="darkred")
+botao_sair.pack(pady=20)
+
+# Código para manter a janela aberta
+tela.mainloop()
