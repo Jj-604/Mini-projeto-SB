@@ -1,85 +1,69 @@
-# Projeto ATLAS - Interface de Gestão
+# 🚀 Projeto ATLAS - Interface de Gestão (Finalizado)
 
-O **Projeto ATLAS** é um sistema de gerenciamento com interface gráfica moderna, desenvolvido em Python. O objetivo é criar uma aplicação intuitiva para controle administrativo, com hierarquia de acessos e ferramentas de produtividade.
+![Status](https://img.shields.io/badge/STATUS-CONCLUÍDO-green)
 
-Atualmente, o projeto conta com um sistema de autenticação funcional (Cadastro e Login) integrado a um banco de dados local.
+O **Projeto ATLAS** é um sistema de gerenciamento completo com interface gráfica moderna, desenvolvido em Python. A aplicação oferece controle administrativo robusto, com hierarquia de acessos (Supervisor e Funcionário) e ferramentas de produtividade integradas.
+
+> [!WARNING] > **AVISO:** Este projeto é somente para fins acadêmicos e não está pronto para ser implementado em um plano real.
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.x**
-- **Tkinter**: Biblioteca padrão para interfaces gráficas.
-- **CustomTkinter**: Para elementos visuais modernos, modo escuro e temas personalizados.
-- **SQLite3**: Banco de dados relacional leve e local para armazenamento de usuários.
-- **Hashlib**: Para criptografia segura de senhas (SHA-256).
+- **Tkinter & CustomTkinter**: Interface gráfica moderna com tema escuro.
+- **SQLite3**: Banco de dados local para usuários, escalas, ponto e feedbacks.
+- **Hashlib**: Criptografia segura de senhas (SHA-256).
 
-## 📋 Pré-requisitos
+## 📋 Funcionalidades Implementadas
 
-Para executar este projeto, você precisará ter o Python instalado e adicionar a biblioteca `customtkinter`:
+### 🔐 Autenticação e Segurança
 
-```bash
-pip install customtkinter
-```
+- [x] Login e Cadastro com validação.
+- [x] Criptografia de senhas.
+- [x] Hierarquia de usuários: **Supervisor** e **Funcionário**.
+- [x] Sessão persistente local.
+
+### 👔 Módulo do Supervisor
+
+- [x] **Dashboard**: Visão geral de funcionários online/offline.
+- [x] **Gestão de Funcionários**: Adicionar, editar e remover usuários.
+- [x] **Gestão de Escalas**: Criar e aprovar escalas de trabalho.
+- [x] **Feedbacks**: Visualizar e responder feedbacks dos funcionários.
+- [x] **Relatórios**: Exportação de registros de ponto para CSV.
+
+### 👷 Módulo do Funcionário
+
+- [x] **Ponto Eletrônico**: Registro de entrada e saída com histórico.
+- [x] **Minha Escala**: Visualização de escalas de trabalho.
+- [x] **Feedbacks**: Envio de dúvidas/sugestões e visualização de respostas.
+- [x] **Notificações Automáticas**: Avisos em tempo real sobre respostas e escalas.
+- [x] **Perfil**: Alteração de senha e tema.
+
+### ⚙️ Melhorias Técnicas
+
+- [x] **Centralização de Strings**: Uso de `constants.py` para fácil manutenção.
+- [x] **Notificações Inteligentes**: Sistema de gatilhos automáticos para avisos importantes.
 
 ## 🚀 Como Executar
 
-1.  Clone o repositório ou baixe os arquivos.
-2.  Certifique-se de que todos os arquivos `.py` estejam na mesma pasta.
-3.  Execute o arquivo principal para iniciar o sistema:
-
-```bash
-python tela_inicial.py
-```
-
-> **Nota:** O sistema criará automaticamente um arquivo `usuarios.db` na primeira execução para armazenar os dados de login.
+1.  Clone o repositório.
+2.  Instale a dependência:
+    ```bash
+    pip install customtkinter
+    ```
+3.  Execute o sistema:
+    ```bash
+    python tela_inicial.py
+    ```
 
 ## 📂 Estrutura do Projeto
 
-- `tela_inicial.py`: Ponto de entrada da aplicação. Permite escolher entre Login ou Cadastro.
-- `tela_login.py`: Formulário de login. Verifica as credenciais no banco de dados.
-- `tela_cadastro.py`: Formulário de registro. Salva novos usuários no banco de dados com senha criptografada.
-- `database.py`: Módulo responsável pela conexão com o SQLite e operações de banco de dados (CRUD).
-
-## 📅 Roadmap e Funcionalidades
-
-Abaixo estão as funcionalidades planejadas e o estado atual do desenvolvimento.
-
-### ✅ Implementado
-
-- [x] Tela Inicial de navegação.
-- [x] Tela de Login (`customtkinter`).
-- [x] Tela de Cadastro (`customtkinter`).
-- [x] **Integração com Banco de Dados SQLite.**
-- [x] **Criptografia de senhas.**
-- [x] Resolução padrão 1920x1080.
-- [x] Tema escuro (Dark Mode) com detalhes em azul.
-
-### 📝 Planejado (Backlog)
-
-**Interface e Experiência (UI/UX)**
-
-- [ ] Interface intuitiva e simples de usar.
-- [ ] Tela de Configurações e Ajuda.
-- [ ] Botões de navegação (Sair, Voltar, Avançar).
-- [ ] Tela de Feedback dos usuários.
-
-**Gestão e Segurança**
-
-- [ ] **Hierarquia de acessos:** Níveis para Supervisor, Técnico e Usuário Comum.
-- [ ] Adicionar e remover funcionários.
-- [ ] Configurações de segurança.
-- [ ] Tela de Perfil do Usuário.
-
-**Ferramentas Administrativas**
-
-- [ ] Tela de Notificações e Alertas.
-- [ ] Relatórios e Estatísticas.
-- [ ] Suporte Técnico.
-- [ ] Atualizações do Sistema.
-- [ ] Gerenciamento de Tarefas.
-- [ ] Calendário e Agendamentos.
-- [ ] Mensagens Internas (Chat).
-- [ ] Gestão de Documentos e Arquivos.
-- [ ] Ponto de Escala.
+- `tela_inicial.py`: Tela de boas-vindas.
+- `tela_login.py` / `tela_cadastro.py`: Autenticação.
+- `tela_supervisor.py`: Painel administrativo completo.
+- `tela_funcionario.py`: Painel do colaborador.
+- `database.py`: Camada de persistência e regras de negócio.
+- `constants.py`: Centralização de textos e configurações.
+- `utils.py`: Funções utilitárias (ex: centralizar janelas).
 
 ---
 
