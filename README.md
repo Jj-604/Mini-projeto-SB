@@ -46,9 +46,9 @@ O **Projeto ATLAS** é um sistema de gerenciamento completo com interface gráfi
 ## 🚀 Como Executar
 
 1.  Clone o repositório.
-2.  Instale a dependência:
+2.  Instale as dependências:
     ```bash
-    pip install customtkinter
+    pip install -r requirements.txt
     ```
 3.  Execute o sistema:
     ```bash
