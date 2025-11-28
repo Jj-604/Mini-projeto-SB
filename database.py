@@ -59,6 +59,31 @@ def iniciar_banco():
         )
     ''')
     
+    # Tabela de notificações
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notificacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            mensagem TEXT NOT NULL,
+            lida INTEGER DEFAULT 0,
+            data_criacao TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    ''')
+
+    # Tabela de feedbacks
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS feedbacks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            mensagem TEXT NOT NULL,
+            resposta TEXT,
+            data_criacao TEXT DEFAULT CURRENT_TIMESTAMP,
+            data_resposta TEXT,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -79,6 +104,48 @@ def cadastrar_usuario(usuario, senha, nome_completo, tipo='funcionario'):
         return True, "Usuário cadastrado com sucesso!"
     except sqlite3.IntegrityError:
         return False, "Nome de usuário já existe."
+    finally:
+        conn.close()
+
+def atualizar_usuario(usuario_id, nome_completo, usuario, senha=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        if senha:
+            senha_hash = hashlib.sha256(senha.encode()).hexdigest()
+            cursor.execute('''
+                UPDATE usuarios 
+                SET nome_completo = ?, usuario = ?, senha = ?
+                WHERE id = ?
+            ''', (nome_completo, usuario, senha_hash, usuario_id))
+        else:
+            cursor.execute('''
+                UPDATE usuarios 
+                SET nome_completo = ?, usuario = ?
+                WHERE id = ?
+            ''', (nome_completo, usuario, usuario_id))
+            
+        conn.commit()
+        return True, "Usuário atualizado com sucesso!"
+    except sqlite3.IntegrityError:
+        return False, "Nome de usuário já existe."
+    except Exception as e:
+        return False, f"Erro ao atualizar: {str(e)}"
+    finally:
+        conn.close()
+
+def deletar_usuario(usuario_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Soft delete (apenas desativa)
+        cursor.execute('UPDATE usuarios SET ativo = 0 WHERE id = ?', (usuario_id,))
+        conn.commit()
+        return True, "Usuário removido com sucesso!"
+    except Exception as e:
+        return False, f"Erro ao remover: {str(e)}"
     finally:
         conn.close()
 
@@ -134,6 +201,110 @@ def buscar_usuario(usuario_id):
     usuario = cursor.fetchone()
     conn.close()
     return usuario
+
+# ==================== NOTIFICAÇÕES ====================
+
+def criar_notificacao(usuario_id, mensagem):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO notificacoes (usuario_id, mensagem) VALUES (?, ?)', (usuario_id, mensagem))
+        conn.commit()
+    finally:
+        conn.close()
+
+def listar_notificacoes(usuario_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, mensagem, data_criacao 
+        FROM notificacoes 
+        WHERE usuario_id = ? AND lida = 0 
+        ORDER BY data_criacao DESC
+    ''', (usuario_id,))
+    notificacoes = cursor.fetchall()
+    conn.close()
+    return notificacoes
+
+def marcar_notificacao_lida(notificacao_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE notificacoes SET lida = 1 WHERE id = ?', (notificacao_id,))
+    conn.commit()
+    conn.close()
+
+# ==================== RELATÓRIOS ====================
+
+def exportar_relatorio_ponto():
+    """Retorna dados para relatório CSV: Nome, Data, Entrada, Saída"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT u.nome_completo, rp.data, rp.hora_entrada, rp.hora_saida
+        FROM registros_ponto rp
+        JOIN usuarios u ON rp.usuario_id = u.id
+        ORDER BY rp.data DESC, u.nome_completo
+    ''')
+    dados = cursor.fetchall()
+    conn.close()
+    return dados
+
+# ==================== FEEDBACKS ====================
+
+def enviar_feedback(usuario_id, mensagem):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO feedbacks (usuario_id, mensagem) VALUES (?, ?)', (usuario_id, mensagem))
+        conn.commit()
+        return True, "Feedback enviado com sucesso!"
+    except Exception as e:
+        return False, f"Erro ao enviar: {str(e)}"
+    finally:
+        conn.close()
+
+def responder_feedback(id, resposta):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            UPDATE feedbacks 
+            SET resposta = ?, data_resposta = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ''', (resposta, id))
+        conn.commit()
+        return True, "Resposta enviada com sucesso!"
+    except Exception as e:
+        return False, f"Erro ao responder: {str(e)}"
+    finally:
+        conn.close()
+
+def listar_feedbacks():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT f.id, u.nome_completo, f.mensagem, f.data_criacao, f.resposta, f.data_resposta
+        FROM feedbacks f
+        JOIN usuarios u ON f.usuario_id = u.id
+        ORDER BY f.data_criacao DESC
+    ''')
+    feedbacks = cursor.fetchall()
+    conn.close()
+    return feedbacks
+
+def listar_meus_feedbacks(usuario_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT mensagem, data_criacao, resposta, data_resposta
+        FROM feedbacks
+        WHERE usuario_id = ?
+        ORDER BY data_criacao DESC
+    ''', (usuario_id,))
+    feedbacks = cursor.fetchall()
+    conn.close()
+    return feedbacks
 
 # ==================== REGISTRO DE PONTO ====================
 
@@ -325,6 +496,24 @@ def aprovar_escala(escala_id):
         return False, f"Erro ao aprovar escala: {str(e)}"
     finally:
         conn.close()
+
+# ==================== HELPERS NOTIFICAÇÕES ====================
+
+def obter_usuario_id_por_feedback(feedback_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT usuario_id FROM feedbacks WHERE id = ?', (feedback_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] if result else None
+
+def obter_usuario_id_por_escala(escala_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT usuario_id FROM escalas WHERE id = ?', (escala_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] if result else None
 
 # Inicializa o banco ao importar o módulo
 iniciar_banco()

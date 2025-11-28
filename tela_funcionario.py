@@ -6,8 +6,11 @@ import json
 import os
 from database import (
     verificar_status_ponto, bater_ponto_entrada, bater_ponto_saida,
-    listar_escalas_funcionario, obter_historico_ponto
+    listar_escalas_funcionario, obter_historico_ponto,
+    listar_notificacoes, marcar_notificacao_lida, atualizar_usuario,
+    enviar_feedback
 )
+from utils import center_window
 
 # Configurações de aparência
 ctk.set_appearance_mode("dark")
@@ -30,161 +33,234 @@ if not usuario_logado:
     subprocess.Popen([sys.executable, "tela_login.py"])
     sys.exit()
 
-# Tela do funcionário
-tela = ctk.CTk()
-tela.title(f"Sistema de Gestão - Funcionário: {usuario_logado['nome']}")
-tela.geometry("700x650")
-tela.resizable(False, False)
+class FuncionarioApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-# Frame principal
-frame_principal = ctk.CTkFrame(tela)
-frame_principal.pack(fill="both", expand=True, padx=20, pady=20)
+        self.title(f"Sistema de Gestão - Funcionário: {usuario_logado['nome']}")
+        self.geometry("800x700")
+        center_window(self, 800, 700)
 
-# Título e status
-frame_header = ctk.CTkFrame(frame_principal)
-frame_header.pack(fill="x", padx=20, pady=10)
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(fill="both", expand=True, padx=20, pady=20)
 
-titulo = ctk.CTkLabel(frame_header, text=f"👷 Olá, {usuario_logado['nome']}!", font=ctk.CTkFont(size=24, weight="bold"))
-titulo.pack(pady=10)
+        self.tab_ponto = self.tabview.add("⏰ Ponto & Escala")
+        self.tab_notificacoes = self.tabview.add("🔔 Notificações")
+        self.tab_feedback = self.tabview.add("💬 Ajuda & Feedback")
+        self.tab_perfil = self.tabview.add("👤 Perfil")
 
-# Status do ponto
-status_atual = verificar_status_ponto(usuario_logado['id'])
-cor_status = "green" if status_atual == "online" else "red"
-texto_status = "🟢 ONLINE - Trabalhando" if status_atual == "online" else "🔴 OFFLINE"
+        self.setup_tab_ponto()
+        self.setup_tab_notificacoes()
+        self.setup_tab_feedback()
+        self.setup_tab_perfil()
 
-label_status = ctk.CTkLabel(frame_header, text=f"Status: {texto_status}", 
-                            font=ctk.CTkFont(size=16, weight="bold"),
-                            text_color=cor_status)
-label_status.pack(pady=5)
+        # Botão Sair
+        ctk.CTkButton(self, text="Sair", command=self.fazer_logout, fg_color="red", hover_color="darkred").pack(pady=10)
 
-# Frame de registro de ponto
-frame_ponto = ctk.CTkFrame(frame_principal)
-frame_ponto.pack(fill="x", padx=20, pady=15)
+        # Auto-atualização
+        self.after(5000, self.auto_atualizar)
 
-ctk.CTkLabel(frame_ponto, text="⏰ Registro de Ponto", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=10)
-
-frame_botoes_ponto = ctk.CTkFrame(frame_ponto)
-frame_botoes_ponto.pack(pady=15)
-
-def atualizar_status():
-    status = verificar_status_ponto(usuario_logado['id'])
-    cor = "green" if status == "online" else "red"
-    texto = "🟢 ONLINE - Trabalhando" if status == "online" else "🔴 OFFLINE"
-    label_status.configure(text=f"Status: {texto}", text_color=cor)
-    atualizar_historico()
-
-def bater_entrada():
-    sucesso, mensagem = bater_ponto_entrada(usuario_logado['id'])
-    if sucesso:
-        messagebox.showinfo("Ponto Registrado", mensagem)
-        atualizar_status()
-    else:
-        messagebox.showwarning("Aviso", mensagem)
-
-def bater_saida():
-    sucesso, mensagem = bater_ponto_saida(usuario_logado['id'])
-    if sucesso:
-        messagebox.showinfo("Ponto Registrado", mensagem)
-        atualizar_status()
-    else:
-        messagebox.showwarning("Aviso", mensagem)
-
-botao_entrada = ctk.CTkButton(frame_botoes_ponto, text="🟢 Bater Ponto ENTRADA", 
-                              command=bater_entrada, width=200, height=50,
-                              fg_color="green", hover_color="darkgreen",
-                              font=ctk.CTkFont(size=14, weight="bold"))
-botao_entrada.grid(row=0, column=0, padx=15)
-
-botao_saida = ctk.CTkButton(frame_botoes_ponto, text="🔴 Bater Ponto SAÍDA", 
-                            command=bater_saida, width=200, height=50,
-                            fg_color="red", hover_color="darkred",
-                            font=ctk.CTkFont(size=14, weight="bold"))
-botao_saida.grid(row=0, column=1, padx=15)
-
-# Frame de histórico de ponto
-frame_historico = ctk.CTkFrame(frame_principal)
-frame_historico.pack(fill="both", expand=True, padx=20, pady=10)
-
-ctk.CTkLabel(frame_historico, text="📋 Histórico de Ponto", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=5)
-
-scrollable_historico = ctk.CTkScrollableFrame(frame_historico, height=150)
-scrollable_historico.pack(fill="both", expand=True, padx=10, pady=5)
-
-# Cabeçalhos do histórico
-frame_cab_hist = ctk.CTkFrame(scrollable_historico)
-frame_cab_hist.pack(fill="x", pady=2)
-
-ctk.CTkLabel(frame_cab_hist, text="Data", width=100, font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, padx=5)
-ctk.CTkLabel(frame_cab_hist, text="Entrada", width=80, font=ctk.CTkFont(weight="bold")).grid(row=0, column=1, padx=5)
-ctk.CTkLabel(frame_cab_hist, text="Saída", width=80, font=ctk.CTkFont(weight="bold")).grid(row=0, column=2, padx=5)
-ctk.CTkLabel(frame_cab_hist, text="Status", width=80, font=ctk.CTkFont(weight="bold")).grid(row=0, column=3, padx=5)
-
-lista_historico_widgets = []
-
-def atualizar_historico():
-    for widget in lista_historico_widgets:
-        widget.destroy()
-    lista_historico_widgets.clear()
-    
-    historico = obter_historico_ponto(usuario_logado['id'], 10)
-    
-    if not historico:
-        frame_vazio = ctk.CTkFrame(scrollable_historico)
-        frame_vazio.pack(fill="x", pady=10)
-        lista_historico_widgets.append(frame_vazio)
-        ctk.CTkLabel(frame_vazio, text="Nenhum registro de ponto encontrado", text_color="gray").pack()
-        return
-    
-    for registro in historico:
-        frame_reg = ctk.CTkFrame(scrollable_historico)
-        frame_reg.pack(fill="x", pady=1)
-        lista_historico_widgets.append(frame_reg)
+    def setup_tab_ponto(self):
+        # Header
+        ctk.CTkLabel(self.tab_ponto, text=f"Olá, {usuario_logado['nome']}!", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=10)
         
-        ctk.CTkLabel(frame_reg, text=registro[0], width=100).grid(row=0, column=0, padx=5)
-        ctk.CTkLabel(frame_reg, text=registro[1] or "-", width=80).grid(row=0, column=1, padx=5)
-        ctk.CTkLabel(frame_reg, text=registro[2] or "-", width=80).grid(row=0, column=2, padx=5)
+        self.label_status = ctk.CTkLabel(self.tab_ponto, text="Carregando status...", font=ctk.CTkFont(size=16, weight="bold"))
+        self.label_status.pack(pady=5)
+
+        # Botoes Ponto
+        frame_btns = ctk.CTkFrame(self.tab_ponto)
+        frame_btns.pack(pady=15)
         
-        status_text = "🟢" if registro[3] == "online" else "🔴"
-        ctk.CTkLabel(frame_reg, text=status_text, width=80).grid(row=0, column=3, padx=5)
+        ctk.CTkButton(frame_btns, text="🟢 Entrada", command=self.bater_entrada, width=150, height=40, fg_color="green").pack(side="left", padx=10)
+        ctk.CTkButton(frame_btns, text="🔴 Saída", command=self.bater_saida, width=150, height=40, fg_color="red").pack(side="left", padx=10)
 
-atualizar_historico()
+        # Histórico
+        ctk.CTkLabel(self.tab_ponto, text="Histórico Recente", font=ctk.CTkFont(weight="bold")).pack(pady=(20, 5))
+        self.scroll_hist = ctk.CTkScrollableFrame(self.tab_ponto, height=150)
+        self.scroll_hist.pack(fill="x", padx=10)
+        
+        # Escala
+        ctk.CTkLabel(self.tab_ponto, text="Minha Escala", font=ctk.CTkFont(weight="bold")).pack(pady=(20, 5))
+        self.scroll_escala = ctk.CTkScrollableFrame(self.tab_ponto, height=150)
+        self.scroll_escala.pack(fill="x", padx=10)
 
-# Frame da escala
-frame_escala = ctk.CTkFrame(frame_principal)
-frame_escala.pack(fill="x", padx=20, pady=10)
+        self.atualizar_dados_ponto()
 
-ctk.CTkLabel(frame_escala, text="📅 Minha Escala", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=5)
+    def setup_tab_notificacoes(self):
+        ctk.CTkButton(self.tab_notificacoes, text="🔄 Atualizar", command=self.carregar_notificacoes).pack(pady=10)
+        self.scroll_notif = ctk.CTkScrollableFrame(self.tab_notificacoes)
+        self.scroll_notif.pack(fill="both", expand=True, padx=10, pady=5)
+        self.carregar_notificacoes()
 
-def ver_escala():
-    escalas = listar_escalas_funcionario(usuario_logado['id'])
-    
-    if not escalas:
-        messagebox.showinfo("Escala", "Você não possui escalas cadastradas.")
-        return
-    
-    texto_escalas = "Suas escalas:\n\n"
-    for escala in escalas:
-        status = "✅ Aprovada" if escala[4] == 1 else "⏳ Pendente"
-        texto_escalas += f"📅 {escala[1]} | {escala[2]} | {escala[3]} | {status}\n"
-    
-    messagebox.showinfo("Minha Escala", texto_escalas)
+    def setup_tab_feedback(self):
+        # Formulario
+        frame_form = ctk.CTkFrame(self.tab_feedback)
+        frame_form.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(frame_form, text="Envie seu feedback ou dúvida:", font=ctk.CTkFont(size=14)).pack(pady=5)
+        self.entry_feedback = ctk.CTkTextbox(frame_form, height=100)
+        self.entry_feedback.pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(frame_form, text="Enviar Feedback", command=self.enviar_feedback_handler).pack(pady=5)
 
-botao_escala = ctk.CTkButton(frame_escala, text="📅 Ver Minha Escala", command=ver_escala, width=200)
-botao_escala.pack(pady=10)
+        # Lista de meus feedbacks
+        ctk.CTkLabel(self.tab_feedback, text="Meus Feedbacks", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(20, 5))
+        self.scroll_feedbacks = ctk.CTkScrollableFrame(self.tab_feedback)
+        self.scroll_feedbacks.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        self.carregar_meus_feedbacks()
 
-# Botão de logout
-def fazer_logout():
-    resposta = messagebox.askyesno("Logout", "Deseja realmente sair?")
-    if resposta:
-        # Remover arquivo de sessão
-        if os.path.exists(SESSAO_PATH):
-            os.remove(SESSAO_PATH)
-        tela.destroy()
-        subprocess.Popen([sys.executable, "tela_inicial.py"])
+    def setup_tab_perfil(self):
+        frame = ctk.CTkFrame(self.tab_perfil)
+        frame.pack(pady=20, padx=20, fill="both")
 
-botao_logout = ctk.CTkButton(frame_principal, text="🚪 Sair (Logout)", command=fazer_logout, 
-                             width=200, height=40, fg_color="gray", hover_color="darkgray")
-botao_logout.pack(pady=15)
+        ctk.CTkLabel(frame, text="Alterar Senha", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=10)
+        
+        self.entry_nova_senha = ctk.CTkEntry(frame, placeholder_text="Nova Senha", show="*", width=200)
+        self.entry_nova_senha.pack(pady=5)
+        
+        ctk.CTkButton(frame, text="Salvar Nova Senha", command=self.alterar_senha).pack(pady=10)
+        
+        # Tema
+        ctk.CTkLabel(frame, text="Aparência").pack(pady=(20, 5))
+        ctk.CTkSegmentedButton(frame, values=["Dark", "Light"], command=lambda m: ctk.set_appearance_mode(m)).pack(pady=5)
 
-# Iniciar a tela
-tela.mainloop()
+    # Lógica Ponto
+    def bater_entrada(self):
+        sucesso, msg = bater_ponto_entrada(usuario_logado['id'])
+        messagebox.showinfo("Info", msg)
+        self.atualizar_dados_ponto()
+
+    def bater_saida(self):
+        sucesso, msg = bater_ponto_saida(usuario_logado['id'])
+        messagebox.showinfo("Info", msg)
+        self.atualizar_dados_ponto()
+
+    def atualizar_dados_ponto(self):
+        # Status
+        status = verificar_status_ponto(usuario_logado['id'])
+        if status == "online":
+            self.label_status.configure(text="🟢 ONLINE - Trabalhando", text_color="green")
+        else:
+            self.label_status.configure(text="🔴 OFFLINE", text_color="red")
+
+        # Histórico
+        for w in self.scroll_hist.winfo_children(): w.destroy()
+        hist = obter_historico_ponto(usuario_logado['id'], 5)
+        for h in hist:
+            ctk.CTkLabel(self.scroll_hist, text=f"{h[0]} | {h[1] or '-'} - {h[2] or '-'}").pack(anchor="w", padx=5)
+
+        # Escala
+        for w in self.scroll_escala.winfo_children(): w.destroy()
+        escalas = listar_escalas_funcionario(usuario_logado['id'])
+        for e in escalas:
+            status_esc = "✅" if e[4] else "⏳"
+            ctk.CTkLabel(self.scroll_escala, text=f"{e[1]} ({e[2]}) - {status_esc}").pack(anchor="w", padx=5)
+
+    # Lógica Notificações
+    def carregar_notificacoes(self):
+        for w in self.scroll_notif.winfo_children(): w.destroy()
+        notifs = listar_notificacoes(usuario_logado['id'])
+        
+        if not notifs:
+            ctk.CTkLabel(self.scroll_notif, text="Nenhuma nova notificação.").pack(pady=20)
+            return
+
+        for n in notifs:
+            frame = ctk.CTkFrame(self.scroll_notif)
+            frame.pack(fill="x", pady=2)
+            ctk.CTkLabel(frame, text=n[1], wraplength=400).pack(side="left", padx=10, pady=5)
+            ctk.CTkButton(frame, text="Lida", width=50, command=lambda nid=n[0]: self.marcar_lida(nid)).pack(side="right", padx=5)
+
+    def marcar_lida(self, nid):
+        marcar_notificacao_lida(nid)
+        self.carregar_notificacoes()
+
+    # Lógica Feedback
+    def setup_tab_feedback(self):
+        # Formulario
+        frame_form = ctk.CTkFrame(self.tab_feedback)
+        frame_form.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(frame_form, text="Envie seu feedback ou dúvida:", font=ctk.CTkFont(size=14)).pack(pady=5)
+        self.entry_feedback = ctk.CTkTextbox(frame_form, height=100)
+        self.entry_feedback.pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(frame_form, text="Enviar Feedback", command=self.enviar_feedback_handler).pack(pady=5)
+
+        # Lista de meus feedbacks
+        ctk.CTkLabel(self.tab_feedback, text="Meus Feedbacks", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(20, 5))
+        self.scroll_feedbacks = ctk.CTkScrollableFrame(self.tab_feedback)
+        self.scroll_feedbacks.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        self.carregar_meus_feedbacks()
+
+    def carregar_meus_feedbacks(self):
+        for w in self.scroll_feedbacks.winfo_children(): w.destroy()
+        
+        from database import listar_meus_feedbacks
+        feedbacks = listar_meus_feedbacks(usuario_logado['id'])
+        
+        if not feedbacks:
+            ctk.CTkLabel(self.scroll_feedbacks, text="Você ainda não enviou nenhum feedback.").pack(pady=20)
+            return
+
+        for f in feedbacks:
+            # f: mensagem, data, resposta, data_resposta
+            card = ctk.CTkFrame(self.scroll_feedbacks)
+            card.pack(fill="x", pady=5)
+            
+            header = ctk.CTkFrame(card, fg_color="transparent")
+            header.pack(fill="x", padx=10, pady=5)
+            ctk.CTkLabel(header, text=f"Enviado em: {f[1]}", font=ctk.CTkFont(size=11)).pack(side="left")
+            
+            status = "✅ Respondido" if f[2] else "⏳ Pendente"
+            color = "green" if f[2] else "orange"
+            ctk.CTkLabel(header, text=status, text_color=color, font=ctk.CTkFont(weight="bold")).pack(side="right")
+
+            ctk.CTkLabel(card, text=f[0], wraplength=600, justify="left").pack(anchor="w", padx=10, pady=(0, 10))
+
+            if f[2]:
+                reply_frame = ctk.CTkFrame(card, fg_color=("gray85", "gray20"))
+                reply_frame.pack(fill="x", padx=10, pady=(0, 10))
+                ctk.CTkLabel(reply_frame, text=f"Resposta ({f[3]}):", font=ctk.CTkFont(size=11, weight="bold")).pack(anchor="w", padx=5, pady=2)
+                ctk.CTkLabel(reply_frame, text=f[2], wraplength=580, justify="left").pack(anchor="w", padx=5, pady=(0, 5))
+
+    def enviar_feedback_handler(self):
+        msg = self.entry_feedback.get("1.0", "end-1c")
+        if not msg.strip():
+            messagebox.showwarning("Aviso", "Escreva uma mensagem.")
+            return
+        
+        if enviar_feedback(usuario_logado['id'], msg):
+            messagebox.showinfo("Sucesso", "Feedback enviado!")
+            self.entry_feedback.delete("1.0", "end")
+            self.carregar_meus_feedbacks()
+        else:
+            messagebox.showerror("Erro", "Falha ao enviar.")
+
+    # Lógica Perfil
+    def alterar_senha(self):
+        nova = self.entry_nova_senha.get()
+        if len(nova) < 4:
+            messagebox.showwarning("Erro", "Senha muito curta (min 4 chars)")
+            return
+        
+        if atualizar_usuario(usuario_logado['id'], usuario_logado['nome'], usuario_logado['usuario'], nova):
+            messagebox.showinfo("Sucesso", "Senha alterada!")
+            self.entry_nova_senha.delete(0, 'end')
+        else:
+            messagebox.showerror("Erro", "Falha ao atualizar senha")
+
+    def auto_atualizar(self):
+        self.atualizar_dados_ponto()
+        self.after(5000, self.auto_atualizar)
+
+    def fazer_logout(self):
+        if messagebox.askyesno("Logout", "Deseja realmente sair?"):
+            if os.path.exists(SESSAO_PATH):
+                os.remove(SESSAO_PATH)
+            self.destroy()
+            subprocess.Popen([sys.executable, "tela_login.py"])
+
+if __name__ == "__main__":
+    app = FuncionarioApp()
+    app.mainloop()
